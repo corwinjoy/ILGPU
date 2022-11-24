@@ -143,6 +143,9 @@ namespace MatrixMultiply
         {
             get
             {
+                if(m_transposed) {
+                    (row, col) = (col, row);
+                }
                 int idx = FindColumn(row, col);
                 if(idx < 0) {
                     return 0.0f;
@@ -152,6 +155,9 @@ namespace MatrixMultiply
             }
             set
             {
+                if(m_transposed) {
+                    (row, col) = (col, row);
+                }
                 int idx = FindColumn(row, col);
                 if(idx < 0) {
                     throw new ArgumentException("Index out of bounds when attempting to update sparse matrix");
