@@ -6,6 +6,8 @@ using CommunityToolkit.HighPerformance;
 
 namespace MatrixMultiply
 {
+    using static Utils;
+    
     public class SparseMatrix
     {
 
@@ -13,17 +15,17 @@ namespace MatrixMultiply
         int m_nrow, m_ncol;
 
         // the max # of non-zero entries in m_num_neighbors f
-        int m_f;
+        public int m_f {get;}
 
         // nrow x f matrix containing column indexes where non-zero values in matrix are for each row in [0:m_nrow]
-        int[,] m_neighbors;
+        public int[,] m_neighbors {get;}
 
         // vector with number of non-zero entries on each row of m_neighbors
         // for all x, m_neighbors[x, m_num_neighbors[x]:m_f] may contain junk
-        int[] m_num_neighbors;
+        public int[] m_num_neighbors {get;}
 
         // Weights for each entry in m_neighbors
-        float[,] m_edge_weights;
+        public float[,] m_edge_weights {get;}
 
 
         // Flag to logically transpose the matrix when accessing
@@ -96,25 +98,6 @@ namespace MatrixMultiply
         }
 
 
-        static int[] To1DArray(int[,] input)
-        {
-            // Step 1: get total size of 2D array, and allocate 1D array.
-            int size = input.Length;
-            int[] result = new int[size];
-            
-            // Step 2: copy 2D array elements into a 1D array.
-            int write = 0;
-            for (int i = 0; i <= input.GetUpperBound(0); i++)
-            {
-                for (int z = 0; z <= input.GetUpperBound(1); z++)
-                {
-                    result[write++] = input[i, z];
-                }
-            }
-            // Step 3: return the new array.
-            return result;
-        }
-
         // Find the requested column from the original dense matrix 
         // in m_neighbors.
         // Return -1 if that column could not be found.
@@ -165,6 +148,7 @@ namespace MatrixMultiply
                 m_edge_weights[row, idx] = value;
             }
         }
+
 
     } // end SparseMatrix
 

@@ -59,6 +59,7 @@ namespace MatrixMultiply
             float[,] ABt = MatrixMultiplyNaive(A, Bt);
             float[,] P_and_ABt = MatrixMask(ABt, P);
 
+            Console.WriteLine("***************************************************************\n");
             Console.WriteLine("A:"); PrintMatrix(A);
             Console.WriteLine("B:"); PrintMatrix(B);
             Console.WriteLine("P:"); PrintMatrix(P);
@@ -75,24 +76,19 @@ namespace MatrixMultiply
 
             SparseMatrix sB = new SparseMatrix(B);
             Console.WriteLine("sB:"); PrintMatrix(sB);
-            Console.WriteLine("Basic Tests Done!");
+            Console.WriteLine("Sparse Tests Done!");
 
-        }
+            Console.WriteLine("***************************************************************\n");
+            Console.WriteLine("Condensed Row Tests:");
 
-        /*
-        cout << "******************************************************************************************\n" << endl;
-        cout << "Sparse matrix tests:" << endl;
-        SparseMatrix<float> sP(P);
-        cout << "sP:\n" << sP << endl;
+            CondensedProductRows CPR = new CondensedProductRows(P, sB, A);
+            Console.WriteLine("CPR row data:"); PrintMatrix(CPR.m_data);
+            Console.WriteLine("CPR dot products:"); CPR.PrintABtDots(sB);
+            Console.WriteLine("Condensed Row Tests Done!");
+            Console.WriteLine("***************************************************************\n");
+        }  
 
-        SparseMatrix<float> sB(B);
-        cout << "sB:\n" << sB << endl;
-        cout << "******************************************************************************************\n" << endl;
-        */
+        #endregion   
 
-        #endregion
-       
-
-        
-    }
-}
+    } // end class Program
+} // end namespace MatrixMultiply
