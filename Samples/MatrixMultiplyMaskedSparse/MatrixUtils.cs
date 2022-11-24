@@ -10,7 +10,7 @@ namespace MatrixMultiply
         /// Print a matrix to the console
         /// </summary>
         /// <param name="a">A MxN matrix</param>
-        public static void PrintMatrix(float[,] a)
+        public static void PrintMatrix(dynamic a)
         {
             for (int i = 0; i < a.GetLength(0); i++)
             {
@@ -103,7 +103,7 @@ namespace MatrixMultiply
         /// <param name="a">A MxN matrix (the actual matrix we got)</param>
         /// <param name="e">A MxN matrix (the matrix we expected) </param>
         /// <returns>True if the matrices are equal</returns>
-        public static bool MatrixEqual(float[,] a, float[,] e)
+        public static bool MatrixEqual(dynamic a, dynamic e)
         {
             var ma = a.GetLength(0);
             var na = a.GetLength(1);
@@ -141,7 +141,7 @@ namespace MatrixMultiply
         /// <param name="a">A dense MxK matrix</param>
         /// <param name="b">A dense KxN matrix</param>
         /// <returns>A dense MxN matrix</returns>
-        public static float[,] MatrixMultiplyNaive(float[,] a, float[,] b)
+        public static float[,] MatrixMultiplyNaive(dynamic a, dynamic b)
         {
             var m = a.GetLength(0);
             var ka = a.GetLength(1);
