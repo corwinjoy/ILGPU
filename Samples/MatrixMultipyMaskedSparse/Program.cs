@@ -17,6 +17,8 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace MatrixMultiply
 {
+    using static Utils;
+
     class Program
     {
         /// <summary>
@@ -65,66 +67,6 @@ namespace MatrixMultiply
         #region Helper functions
 
         /// <summary>
-        /// Creates a matrix populated with random values.
-        /// </summary>
-        /// <param name="rows">The number of rows in the matrix</param>
-        /// <param name="columns">The number of columns in the matrix</param>
-        /// <returns>A matrix populated with random values</returns>
-        [SuppressMessage(
-            "Security",
-            "CA5394:Do not use insecure randomness",
-            Justification = "Only used for testing")]
-        static float[,] CreateRandomMatrix(int rows, int columns)
-        {
-            var rnd = new Random();
-            var matrix = new float[rows, columns];
-
-            for (var i = 0; i < rows; i++)
-            {
-                for (var j = 0; j < columns; j++)
-                    matrix[i, j] = rnd.Next(minValue: -100, maxValue: 100);
-            }
-
-            return matrix;
-        }
-
-        /// <summary>
-        /// Compares two matrices for equality.
-        /// </summary>
-        /// <param name="a">A dense MxN matrix</param>
-        /// <param name="b">A dense MxN matrix</param>
-        /// <returns>True if the matrices are equal</returns>
-        static bool MatrixEqual(float[,] a, float[,] b)
-        {
-            var ma = a.GetLength(0);
-            var na = a.GetLength(1);
-            var mb = b.GetLength(0);
-            var nb = b.GetLength(1);
-
-            if (ma != mb || na != nb)
-            {
-                Debug.WriteLine($"Matrix dimensions do not match: [{ma}x{na}] vs [{mb}x{nb}]");
-                return false;
-            }
-
-            for (var i = 0; i < ma; i++)
-            {
-                for (var j = 0; j < na; j++)
-                {
-                    var actual = a[i, j];
-                    var expected = b[i, j];
-                    if (actual != expected)
-                    {
-                        Debug.WriteLine($"Error at element location [{i}, {j}]: {actual} found, {expected} expected");
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// Performs matrix multiplication using each of the various implementations.
         /// </summary>
         static void RunMatrixMultiply(float[,] a, float[,] b, float[,] expectedResult)
@@ -167,42 +109,7 @@ namespace MatrixMultiply
 
         #endregion
 
-        #region Naive algorithm
-
-        /// <summary>
-        /// Multiplies two dense matrices and returns the resultant matrix.
-        /// </summary>
-        /// <param name="accelerator">The Accelerator to run the multiplication on</param>
-        /// <param name="a">A dense MxK matrix</param>
-        /// <param name="b">A dense KxN matrix</param>
-        /// <returns>A dense MxN matrix</returns>
-        static float[,] MatrixMultiplyNaive(float[,] a, float[,] b)
-        {
-            var m = a.GetLength(0);
-            var ka = a.GetLength(1);
-            var kb = b.GetLength(0);
-            var n = b.GetLength(1);
-
-            if (ka != kb)
-                throw new ArgumentException($"Cannot multiply {m}x{ka} matrix by {n}x{kb} matrix", nameof(b));
-
-            var c = new float[m, n];
-
-            for (var x = 0; x < m; x++)
-            {
-                for (var y = 0; y < n; y++)
-                {
-                    c[x, y] = 0;
-
-                    for (var z = 0; z < ka; z++)
-                        c[x, y] += a[x, z] * b[z, y];
-                }
-            }
-
-            return c;
-        }
-
-        #endregion
+        
 
         #region Accelerated algorithm
 
