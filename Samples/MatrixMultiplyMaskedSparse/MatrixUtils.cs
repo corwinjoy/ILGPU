@@ -20,6 +20,7 @@ namespace MatrixMultiply
                 }
                 Console.WriteLine();
             }
+            Console.WriteLine();
         }
         
         
@@ -44,6 +45,55 @@ namespace MatrixMultiply
                     matrix[i, j] = rnd.Next(minValue: -100, maxValue: 100);
             }
 
+            return matrix;
+        }
+
+
+        /// <summary>
+        /// Creates a matrix populated with sequential values.
+        /// </summary>
+        /// <param name="rows">The number of rows in the matrix</param>
+        /// <param name="columns">The number of columns in the matrix</param>
+        /// <returns>A matrix populated with sequential values</returns>
+        public static float[,] CreateSequentialMatrix(int rows, int columns)
+        {
+            float seq = 0.0f;
+            var matrix = new float[rows, columns];
+
+            for (var i = 0; i < rows; i++)
+            {
+                for (var j = 0; j < columns; j++)
+                    matrix[i, j] = seq++;
+            }
+
+            return matrix;
+        }
+
+        /// <summary>
+        /// Creates an Identity matrix.
+        /// </summary>
+        /// <param name="rows">The number of rows in the matrix</param>
+        /// <param name="columns">The number of columns in the matrix</param>
+        /// <returns>A matrix populated 1s along the diagonal and 0s elsewhere</returns>
+        public static float[,] CreateIndentityMatrix(int rows, int columns)
+        {
+            var matrix = new float[rows, columns];
+
+            for (var i = 0; i < rows; i++)
+            {
+                for (var j = 0; j < columns; j++) 
+                {
+                    if(i==j) 
+                    {
+                        matrix[i, j] = 1.0f;
+                    }
+                    else 
+                    {
+                        matrix[i, j] = 0.0f;
+                    }
+                }
+                    
+            }
             return matrix;
         }
 
@@ -143,9 +193,9 @@ namespace MatrixMultiply
         /// Apply a binary mask to a matrix
         /// </summary>
         /// <param name="a">A MxN matrix</param>
-        /// <param name="mask">A MxN binary mask</param>
+        /// <param name="mask">A MxN binary mask of 1s and 0s</param>
         /// <returns>(a && mask)  that is, the matrix a as masked by mask</returns>
-        public static float[,] MatrixMask(float[,] a, bool[,] mask)
+        public static float[,] MatrixMask(float[,] a, float[,] mask)
         {
             var ma = a.GetLength(0);
             var na = a.GetLength(1);
@@ -165,7 +215,7 @@ namespace MatrixMultiply
             {
                 for (var j = 0; j < na; j++)
                 {
-                    if (mask[i, j])
+                    if (mask[i, j] != 0.0f)
                     {
                         a_m[i, j] = a[i, j];
                     } 
