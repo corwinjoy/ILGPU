@@ -20,7 +20,7 @@ namespace MatrixMultiply
 
         // vector with number of non-zero entries on each row of m_neighbors
         // for all x, m_neighbors[x, m_num_neighbors[x]:m_f] may contain junk
-        List<int> m_num_neighbors;
+        int[] m_num_neighbors;
 
         // Weights for each entry in m_neighbors
         float[,] m_edge_weights;
@@ -40,7 +40,7 @@ namespace MatrixMultiply
             m_transposed = false;
             m_nrow = a.GetLength(0);
             m_ncol = a.GetLength(1);
-            m_num_neighbors = new List<int>(m_nrow);
+            m_num_neighbors = new int[m_nrow];
 
             // Get counts of the number of columns we need to represent
             m_f = 0;
@@ -96,16 +96,45 @@ namespace MatrixMultiply
         }
 
 
+        static int[] To1DArray(int[,] input)
+        {
+            // Step 1: get total size of 2D array, and allocate 1D array.
+            int size = input.Length;
+            int[] result = new int[size];
+            
+            // Step 2: copy 2D array elements into a 1D array.
+            int write = 0;
+            for (int i = 0; i <= input.GetUpperBound(0); i++)
+            {
+                for (int z = 0; z <= input.GetUpperBound(1); z++)
+                {
+                    result[write++] = input[i, z];
+                }
+            }
+            // Step 3: return the new array.
+            return result;
+        }
+
         // Find the requested column from the original dense matrix 
         // in m_neighbors.
         // Return -1 if that column could not be found.
+        // TODO: This is terrible, ask Marcel how to do without copy
         private int FindColumn(int row, int col)
         {
             int nonzero = m_num_neighbors[row];
             Span2D<int> span = m_neighbors;
             // Span2D<int> row_neighbors = span[row, ..nonzero]; // The nonzero column indexes for that row
             Span2D<int> row_neighbors = span.Slice(row, 0, 1, nonzero); // It seems this .NET version does not support range ops as above??
-            int idx = Array.BinarySearch(row_neighbors.ToArray(), col);
+            // Marcel, what I want to do use use BinarySearch in the System assembly.
+            // But is this only .NET 7??
+            // https://learn.microsoft.com/en-us/dotnet/api/system.memoryextensions.binarysearch?view=net-7.0#system-memoryextensions-binarysearch-2(system-span((-0))-1)
+            //
+            // int idx = BinarySearch(row_neighbors, col);
+            
+            // Bad implementation for now
+            var span_arr = row_neighbors.ToArray();
+            int[] arr = To1DArray(span_arr);
+            int idx = Array.BinarySearch(arr, col);
             return idx;
         }
 

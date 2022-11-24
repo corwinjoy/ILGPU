@@ -65,7 +65,6 @@ namespace MatrixMultiply
             Console.WriteLine("Bt:"); PrintMatrix(Bt);
             Console.WriteLine("ABt:"); PrintMatrix(ABt);
             Console.WriteLine("P && ABt:"); PrintMatrix(P_and_ABt);
-
             Console.WriteLine("Basic Tests Done!");
 
             Console.WriteLine("***************************************************************\n");
@@ -76,6 +75,7 @@ namespace MatrixMultiply
 
             SparseMatrix sB = new SparseMatrix(B);
             Console.WriteLine("sB:"); PrintMatrix(sB);
+            Console.WriteLine("Basic Tests Done!");
 
         }
 
