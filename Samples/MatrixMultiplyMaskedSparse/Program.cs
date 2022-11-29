@@ -1,4 +1,4 @@
-﻿#define MATDEBUG
+﻿// #define MATDEBUG
 
 /* Problem statement:
  * Create a CUDA kernal for the following sparse matrix problem
@@ -37,7 +37,7 @@ namespace MatrixMultiply
         static void Main()
         {
             // SmokeTest(3, 2);
-            CudaSmokeTest(200, 150);
+            CudaSmokeTest(2000, 1500);
         }
 
         #region Helper functions
@@ -139,16 +139,26 @@ namespace MatrixMultiply
             foreach (var device in context)
             {
                 using var accelerator = device.CreateAccelerator(context);
-                sw.Restart();
+
+                // Do initial call to compile kernel and warmup
                 CondensedMatrixMultiplication(accelerator, cPA, sB, PABt);
+
+                int repeats = 10;
+
+                sw.Restart();
+                for(int i=0; i<repeats; ++i) {
+                    CondensedMatrixMultiplication(accelerator, cPA, sB, PABt);
+                }
                 sw.Stop();
+
                 #if MATDEBUG
                 Debug.Assert(MatrixEqual(PABt, P_and_ABt));
                 #endif
                 
                 //Console.WriteLine("PABt:"); PrintMatrix(PABt);
                 //Console.WriteLine("P_and_ABt:"); PrintMatrix(P_and_ABt);
-                Console.WriteLine($"- Accelerated implementation on {accelerator}: {sw.ElapsedMilliseconds}ms");  
+                Console.WriteLine($"- Accelerated implementation on {accelerator}: " +
+                    $"{(float)sw.ElapsedMilliseconds/(float)repeats}ms");  
             }         
         }
 
@@ -170,26 +180,28 @@ namespace MatrixMultiply
             var kernel = accelerator.LoadAutoGroupedStreamKernel<
                 Index1D,
                 ArrayView1D<int, Stride1D.Dense>,
-                ArrayView2D<float, Stride2D.DenseX>,
-                ArrayView2D<float, Stride2D.DenseX>,
-                ArrayView1D<float, Stride1D.Dense>>(
+                ArrayView2D<float, Stride2D.DenseY>,
+                ArrayView2D<float, Stride2D.DenseY>,
+                ArrayView1D<float, Stride1D.Dense>,
+                SpecializedValue<int>>(
                     AcceleratedDotProductKernel
                 );
 
             int a_row = PA.m_data.GetLength(0);
+            int row_len = PA.m_data.GetLength(1);
             int max_col = PA.m_data.GetLength(1);
             int b_row = B.m_edge_weights.GetLength(0);
         
             using var col_idx = accelerator.Allocate1D(PA.m_col_idx);
-            using var rows = accelerator.Allocate2DDenseX<float>(new Index2D(a_row, max_col));
-            using var cols = accelerator.Allocate2DDenseX<float>(new Index2D(b_row, max_col));
+            using var rows = accelerator.Allocate2DDenseY<float>(new Index2D(a_row, max_col));
+            using var cols = accelerator.Allocate2DDenseY<float>(new Index2D(b_row, max_col));
             using var dotsum = accelerator.Allocate1D<float>(a_row);
 
             col_idx.CopyFromCPU(PA.m_col_idx); // do we need this line?
             rows.CopyFromCPU(PA.m_data);
             cols.CopyFromCPU(B.m_edge_weights);
 
-            kernel(dotsum.Extent.ToIntIndex(), col_idx.View, rows.View, cols.View, dotsum.View);
+            kernel(dotsum.Extent.ToIntIndex(), col_idx.View, rows.View, cols.View, dotsum.View, SpecializedValue.New(row_len));
 
             // Copy result to empty dense output matrix
             float[] h_dotsum = dotsum.GetAsArray1D();
@@ -210,22 +222,23 @@ namespace MatrixMultiply
         static void AcceleratedDotProductKernel(
             Index1D index,
             ArrayView1D<int, Stride1D.Dense> col_idx,
-            ArrayView2D<float, Stride2D.DenseX> rows,
-            ArrayView2D<float, Stride2D.DenseX> cols,
-            ArrayView1D<float, Stride1D.Dense> dotsum)
+            ArrayView2D<float, Stride2D.DenseY> rows,
+            ArrayView2D<float, Stride2D.DenseY> cols,
+            ArrayView1D<float, Stride1D.Dense> dotsum,
+            SpecializedValue<int> row_len   // This SpecializedValue helps the compiler optimize the loop
+        )
         {
             int row = index.X;
             int col = col_idx[row];
             float sum = 0.0f;
 
-            for (var i = 0; i < rows.IntExtent.Y; i++)
-                sum += rows[new Index2D(row, i)] * cols[new Index2D(col, i)];
+            for (var i = 0; i < row_len; i++)
+                sum += rows[row, i] * cols[col, i];
 
             dotsum[index] = sum;
         }
 
- 
-
+        
         #endregion
 
     } // end class Program

@@ -4,7 +4,7 @@
     <LibraryTargetFrameworks>net6.0</LibraryTargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
-    <LibraryTargetFrameworks>$(LibraryTargetFrameworks);net471;netstandard2.1;net5.0</LibraryTargetFrameworks>
+    <LibraryTargetFrameworks>$(LibraryTargetFrameworks)</LibraryTargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
