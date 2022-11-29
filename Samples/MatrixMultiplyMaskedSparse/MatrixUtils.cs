@@ -69,6 +69,37 @@ namespace MatrixMultiply
             return matrix;
         }
 
+
+        /// <summary>
+        /// Creates a n-diagonal matrix populated with sequential values.
+        /// </summary>
+        /// <param name="rows">The number of rows in the matrix</param>
+        /// <param name="columns">The number of columns in the matrix</param>
+        /// <param name="band_width">Band-width around the diagonal to populate</param>
+        /// <returns>A banded diagonal matrix populated with sequential values</returns>
+        public static float[,] CreateBandedSequentialMatrix(int rows, int columns, int band_width)
+        {
+            float seq = 0.0f;
+            var matrix = new float[rows, columns];
+
+            for (var i = 0; i < rows; i++)
+            {
+                for (var j = 0; j < columns; j++) 
+                {
+                    if(Math.Abs(i-j) < band_width) 
+                    {
+                        matrix[i, j] = seq++;
+                    } else 
+                    {
+                        matrix[i, j] = 0.0f;
+                    }
+                }
+                    
+            }
+
+            return matrix;
+        }
+
         /// <summary>
         /// Creates an Identity matrix.
         /// </summary>
@@ -120,9 +151,9 @@ namespace MatrixMultiply
             {
                 for (var j = 0; j < na; j++)
                 {
-                    var actual = a[i, j];
-                    var expected = e[i, j];
-                    if (actual != expected)
+                    var actual = a[i, j].ToString("G4");  // G4 = 4 significant digits
+                    var expected = e[i, j].ToString("G4");
+                    if (actual != expected) 
                     {
                         Debug.WriteLine($"Error at element location [{i}, {j}]: {actual} found, {expected} expected");
                         return false;
