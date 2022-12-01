@@ -319,7 +319,8 @@ namespace MatrixMultiply
             matrix_index middle;
             while (left <= right)
             {
-                middle = (left + right) / 2;
+                // middle = (left + right) / 2;  Overflow bug
+                middle = left + (right-left)/2;
                 switch (Compare(this[middle], value))
                 {
                     case -1: left = middle + 1; break;
