@@ -1,4 +1,4 @@
-global using matrix_index = System.UInt32;
+global using matrix_index = System.Int32;
 global using matrix_data = System.Single;
 
 using System;
