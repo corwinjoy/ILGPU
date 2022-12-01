@@ -52,15 +52,15 @@ namespace MatrixMultiply
         * B = k x k, sparse matrix
         * P = n x k, dense matrix of 1s and 0s indicating if we care about an entry in the product A*B'
         */
-        static void SmokeTest(int n, int k)
+        static void SmokeTest(matrix_index n, matrix_index k)
         {
-            float[,] A = CreateSequentialMatrix(n, k);
-            float[,] B = CreateSequentialMatrix(k, k);
-            float[,] P = CreateIndentityMatrix(n, k);
+            matrix_data[,] A = CreateSequentialMatrix(n, k);
+            matrix_data[,] B = CreateSequentialMatrix(k, k);
+            matrix_data[,] P = CreateIndentityMatrix(n, k);
 
-            float[,] Bt = MatrixTranspose(B);
-            float[,] ABt = MatrixMultiplyNaive(A, Bt);
-            float[,] P_and_ABt = MatrixMask(ABt, P);
+            matrix_data[,] Bt = MatrixTranspose(B);
+            matrix_data[,] ABt = MatrixMultiplyNaive(A, Bt);
+            matrix_data[,] P_and_ABt = MatrixMask(ABt, P);
 
             Console.WriteLine("***************************************************************\n");
             Console.WriteLine("A:"); PrintMatrix(A);
@@ -102,12 +102,12 @@ namespace MatrixMultiply
         * B = k x k, sparse matrix
         * P = n x k, dense matrix of 1s and 0s indicating if we care about an entry in the product A*B'
         */
-        static void CudaSmokeTest(int n, int k)
+        static void CudaSmokeTest(matrix_index n, matrix_index k)
         {
-            int band_width = 100;
-            float[,] A = CreateSequentialMatrix(n, k);
-            float[,] B = CreateBandedSequentialMatrix(k, k, band_width);
-            float[,] P = CreateIndentityMatrix(n, k);
+            matrix_index band_width = 100;
+            matrix_data[,] A = CreateSequentialMatrix(n, k);
+            matrix_data[,] B = CreateBandedSequentialMatrix(k, k, band_width);
+            matrix_data[,] P = CreateIndentityMatrix(n, k);
 
             var sw = new Stopwatch();
             
@@ -123,16 +123,16 @@ namespace MatrixMultiply
             #if MATDEBUG
             // Debug check
             sw.Restart();
-            float[,] Bt = MatrixTranspose(B);
-            float[,] ABt = MatrixMultiplyNaive(A, Bt);
-            float[,] P_and_ABt = MatrixMask(ABt, P);
+            matrix_data[,] Bt = MatrixTranspose(B);
+            matrix_data[,] ABt = MatrixMultiplyNaive(A, Bt);
+            matrix_data[,] P_and_ABt = MatrixMask(ABt, P);
             sw.Stop();
             Console.WriteLine("Finished debug check.");
             Console.WriteLine($"Naive multiplication takes: {sw.ElapsedMilliseconds}ms"); 
             #endif
             
 
-            float[,] PABt = new float[n, k];
+            matrix_data[,] PABt = new matrix_data[n, k];
 
             // Accelerated implementations
             using var context = Context.CreateDefault();
@@ -146,7 +146,7 @@ namespace MatrixMultiply
                 int repeats = 10;
 
                 sw.Restart();
-                for(int i=0; i<repeats; ++i) {
+                for(matrix_index i=0; i<repeats; ++i) {
                     CondensedMatrixMultiplication(accelerator, cPA, sB, PABt);
                 }
                 sw.Stop();
@@ -176,26 +176,28 @@ namespace MatrixMultiply
         /// <param name="B">A sparse matrix Bx</param>
         /// <param name="PABt">The dense matrix to return values into, PA * B'</param>
         static void CondensedMatrixMultiplication(Accelerator accelerator, CondensedProductRows PA, SparseMatrix B, 
-            float [,] PABt) {
+            matrix_data [,] PABt) {
             var kernel = accelerator.LoadAutoGroupedStreamKernel<
                 Index1D,
-                ArrayView1D<int, Stride1D.Dense>,
-                ArrayView2D<float, Stride2D.DenseY>,
-                ArrayView2D<float, Stride2D.DenseY>,
-                ArrayView1D<float, Stride1D.Dense>,
-                SpecializedValue<int>>(
+                ArrayView1D<matrix_index, Stride1D.Dense>,
+                ArrayView2D<matrix_data, Stride2D.DenseY>,
+                ArrayView2D<matrix_data, Stride2D.DenseY>,
+                ArrayView1D<matrix_data, Stride1D.Dense>,
+                SpecializedValue<matrix_index>>(
                     AcceleratedDotProductKernel
                 );
 
-            int a_row = PA.m_data.GetLength(0);
-            int row_len = PA.m_data.GetLength(1);
-            int max_col = PA.m_data.GetLength(1);
-            int b_row = B.m_edge_weights.GetLength(0);
+            matrix_index a_row = (matrix_index) PA.m_data.GetLength(0);
+            matrix_index row_len = (matrix_index) PA.m_data.GetLength(1);
+            matrix_index max_col = (matrix_index) PA.m_data.GetLength(1);
+            matrix_index b_row = (matrix_index) B.m_edge_weights.GetLength(0);
         
             using var col_idx = accelerator.Allocate1D(PA.m_col_idx);
-            using var rows = accelerator.Allocate2DDenseY<float>(new Index2D(a_row, max_col));
-            using var cols = accelerator.Allocate2DDenseY<float>(new Index2D(b_row, max_col));
-            using var dotsum = accelerator.Allocate1D<float>(a_row);
+
+            // LIMITATION. It seems that Index2D can only handle int.
+            using var rows = accelerator.Allocate2DDenseY<matrix_data>(new Index2D((int) a_row, (int) max_col));
+            using var cols = accelerator.Allocate2DDenseY<matrix_data>(new Index2D((int) b_row, (int) max_col));
+            using var dotsum = accelerator.Allocate1D<matrix_data>(a_row);
 
             col_idx.CopyFromCPU(PA.m_col_idx); // do we need this line?
             rows.CopyFromCPU(PA.m_data);
@@ -204,11 +206,11 @@ namespace MatrixMultiply
             kernel(dotsum.Extent.ToIntIndex(), col_idx.View, rows.View, cols.View, dotsum.View, SpecializedValue.New(row_len));
 
             // Copy result to empty dense output matrix
-            float[] h_dotsum = dotsum.GetAsArray1D();
-            for(int i=0; i < a_row; ++i) 
+            matrix_data[] h_dotsum = dotsum.GetAsArray1D();
+            for(matrix_index i=0; i < a_row; ++i) 
             {
-                int r = PA.m_row_idx[i];
-                int c = PA.m_col_idx[i];
+                matrix_index r = PA.m_row_idx[i];
+                matrix_index c = PA.m_col_idx[i];
                 PABt[r, c] = h_dotsum[i];
             }
         }
@@ -221,16 +223,16 @@ namespace MatrixMultiply
         //   where dotsum[x] = rows[x, ] * cols[col_idx[x], ]
         static void AcceleratedDotProductKernel(
             Index1D index,
-            ArrayView1D<int, Stride1D.Dense> col_idx,
-            ArrayView2D<float, Stride2D.DenseY> rows,
-            ArrayView2D<float, Stride2D.DenseY> cols,
-            ArrayView1D<float, Stride1D.Dense> dotsum,
-            SpecializedValue<int> row_len   // This SpecializedValue helps the compiler optimize the loop
+            ArrayView1D<matrix_index, Stride1D.Dense> col_idx,
+            ArrayView2D<matrix_data, Stride2D.DenseY> rows,
+            ArrayView2D<matrix_data, Stride2D.DenseY> cols,
+            ArrayView1D<matrix_data, Stride1D.Dense> dotsum,
+            SpecializedValue<matrix_index> row_len   // This SpecializedValue helps the compiler optimize the loop
         )
         {
-            int row = index.X;
-            int col = col_idx[row];
-            float sum = 0.0f;
+            matrix_index row = (matrix_index) index.X;
+            matrix_index col = col_idx[row];
+            matrix_data sum = 0.0f;
 
             for (var i = 0; i < row_len; i++)
                 sum += rows[row, i] * cols[col, i];
@@ -238,7 +240,7 @@ namespace MatrixMultiply
             dotsum[index] = sum;
         }
 
-        
+
         #endregion
 
     } // end class Program

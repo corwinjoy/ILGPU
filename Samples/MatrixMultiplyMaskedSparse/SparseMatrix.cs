@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+
 using CommunityToolkit.HighPerformance;
 
 namespace MatrixMultiply
@@ -12,24 +13,20 @@ namespace MatrixMultiply
     {
 
         // the number of rows, columns.
-        int m_nrow, m_ncol;
+        matrix_index m_nrow, m_ncol;
 
         // the max # of non-zero entries in m_num_neighbors f
-        public int m_f {get;}
+        public matrix_index m_f {get;}
 
         // nrow x f matrix containing column indexes where non-zero values in matrix are for each row in [0:m_nrow]
-        public int[,] m_neighbors {get;}
+        public matrix_index[,] m_neighbors {get;}
 
         // vector with number of non-zero entries on each row of m_neighbors
         // for all x, m_neighbors[x, m_num_neighbors[x]:m_f] may contain junk
-        public int[] m_num_neighbors {get;}
+        public matrix_index[] m_num_neighbors {get;}
 
         // Weights for each entry in m_neighbors
-        public float[,] m_edge_weights {get;}
-
-
-        // Flag to logically transpose the matrix when accessing
-        bool m_transposed;
+        public matrix_data[,] m_edge_weights {get;}
 
 
         /// <summary>
@@ -37,18 +34,17 @@ namespace MatrixMultiply
         /// </summary>
         /// <param name="a">A MxN matrix</param>
         /// <returns>A sparse representation of A</returns>
-        public SparseMatrix(float[,] a)
+        public SparseMatrix(matrix_data[,] a)
         {
-            m_transposed = false;
-            m_nrow = a.GetLength(0);
-            m_ncol = a.GetLength(1);
-            m_num_neighbors = new int[m_nrow];
+            m_nrow = (matrix_index)a.GetLength(0);
+            m_ncol = (matrix_index)a.GetLength(1);
+            m_num_neighbors = new matrix_index[m_nrow];
 
             // Get counts of the number of columns we need to represent
             m_f = 0;
-            for(int i=0; i<m_nrow; ++i) {
-                int row_entries = 0;
-                for(int j=0; j<m_ncol; ++j) {
+            for(matrix_index i=0; i<m_nrow; ++i) {
+                matrix_index row_entries = 0;
+                for(matrix_index j=0; j<m_ncol; ++j) {
                     if(Math.Abs(a[i, j]) > 0.0f) {
                         ++row_entries;
                     }
@@ -61,11 +57,11 @@ namespace MatrixMultiply
             Debug.Assert(m_f > 0);
 
             // Copy non-zero data to sparse storage
-            m_neighbors = new int[m_nrow, m_f];
-            m_edge_weights = new float[m_nrow, m_f];
-            for(int i=0; i<m_nrow; ++i) {
-                int idx = 0;
-                for(int j=0; j<m_ncol; ++j) {
+            m_neighbors = new matrix_index[m_nrow, m_f];
+            m_edge_weights = new matrix_data[m_nrow, m_f];
+            for(matrix_index i=0; i<m_nrow; ++i) {
+                matrix_index idx = 0;
+                for(matrix_index j=0; j<m_ncol; ++j) {
                     if(Math.Abs(a[i, j]) > 0.0f) {
                         m_neighbors[i, idx] = j;
                         m_edge_weights[i, idx] = a[i, j];
@@ -80,7 +76,7 @@ namespace MatrixMultiply
         /// </summary>
         /// <param name="dim">Dimension to retrieve inforamation about</param>
         /// <returns>Length of that dimension</returns>
-        public int GetLength(int dim) 
+        public matrix_index GetLength(matrix_index dim) 
         {
             Debug.Assert(dim < 2);
             if(dim == 0) {
@@ -92,56 +88,37 @@ namespace MatrixMultiply
             return 0;
         }
 
-        /// Logically transpose the matrix
-        public void Transpose() {
-            m_transposed = !m_transposed;
-        }
-
 
         // Find the requested column from the original dense matrix 
         // in m_neighbors.
         // Return -1 if that column could not be found.
         // TODO: This is terrible, ask Marcel how to do without copy
-        private int FindColumn(int row, int col)
+        private matrix_index FindColumn(matrix_index row, matrix_index col)
         {
-            int nonzero = m_num_neighbors[row];
-            Span2D<int> span = m_neighbors;
-            // Span2D<int> row_neighbors = span[row, ..nonzero]; // The nonzero column indexes for that row
-            Span2D<int> row_neighbors = span.Slice(row, 0, 1, nonzero); // It seems this .NET version does not support range ops as above??
-            // Marcel, what I want to do use use BinarySearch in the System assembly.
-            // But is this only .NET 7??
-            // https://learn.microsoft.com/en-us/dotnet/api/system.memoryextensions.binarysearch?view=net-7.0#system-memoryextensions-binarysearch-2(system-span((-0))-1)
-            //
-            // int idx = BinarySearch(row_neighbors, col);
-            
-            // Bad implementation for now
-            var span_arr = row_neighbors.ToArray();
-            int[] arr = To1DArray(span_arr);
-            int idx = Array.BinarySearch(arr, col);
+            matrix_index nonzero = m_num_neighbors[row];
+            var row_neighbors = m_neighbors.Slice(row, nonzero);
+            matrix_index idx = row_neighbors.BinarySearch(col);
             return idx;
         }
 
 
-        public float this[int row, int col]
+        public matrix_data this[matrix_index row, matrix_index col]
         {
             get
             {
-                if(m_transposed) {
-                    (row, col) = (col, row);
-                }
-                int idx = FindColumn(row, col);
-                if(idx < 0) {
+                try 
+                {
+                    matrix_index idx = FindColumn(row, col);
+                    return m_edge_weights[row, idx];
+                } 
+                catch (ArgumentOutOfRangeException)
+                {       
                     return 0.0f;
                 }
-
-                return m_edge_weights[row, idx];
             }
             set
             {
-                if(m_transposed) {
-                    (row, col) = (col, row);
-                }
-                int idx = FindColumn(row, col);
+                matrix_index idx = FindColumn(row, col);
                 if(idx < 0) {
                     throw new ArgumentException("Index out of bounds when attempting to update sparse matrix");
                 }
