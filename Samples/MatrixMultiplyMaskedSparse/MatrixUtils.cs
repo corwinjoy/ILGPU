@@ -314,7 +314,7 @@ namespace MatrixMultiply
         public matrix_index BinarySearch(T value)
         {
             matrix_index left = 0;
-            matrix_index right = (matrix_index)arr.Length - 1;
+            matrix_index right = this.length - 1;
         
             matrix_index middle;
             while (left <= right)
